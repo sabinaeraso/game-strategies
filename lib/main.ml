@@ -36,8 +36,25 @@ module Exercises = struct
   ;;
 
   let print_game (game : Game.t) =
-    ignore game;
-    print_endline ""
+    let kind = game.game_kind in
+    let board = game.board in
+    let y_length = (Game.Game_kind.board_length kind)*2 - 1 in 
+    let x_length = (Game.Game_kind.board_length kind)*3  in
+    let list = List.join ( List.init y_length ~f:(fun y ->
+      List.init x_length ~f:(fun x ->
+        if (equal (y%2) 1 )then("-") else(
+          if (equal x 0  || equal (x%4) 0 ) then( 
+            match Map.find board Game.Position.{row = y/2; column = x/4 } with 
+            | Some pos -> Game.Piece.to_string pos
+            | None -> " "
+             ) else if(equal (x%2) 0 ) then("|") else(" ")
+        )
+        )
+     )) in
+     List.iteri list ~f:(fun i s ->
+      if (equal (i%x_length) 0 ) then( print_newline () ) else() ;
+      printf "%s" s 
+     )
   ;;
 
   let%expect_test "print_win_for_x" =
@@ -68,8 +85,27 @@ module Exercises = struct
 
   (* Exercise 1 *)
   let available_moves (game : Game.t) : Game.Position.t list =
-    ignore game;
-    failwith "Implement me!"
+    let board = game.board in 
+    let kind = game.game_kind in
+    let y_length = (Game.Game_kind.board_length kind) in 
+    let x_length = (Game.Game_kind.board_length kind)  in
+      List.join ( List.init y_length ~f:(fun y ->
+      List.init x_length ~f:(fun x -> 
+        let piece = Map.find board Game.Position.{row = y; column = x} in 
+          match piece with 
+          | None ->  Game.Position.{row = y; column = x}
+          | Some _ ->  Game.Position.{row = 3; column = 3}
+      ))) 
+  ;;
+
+  let%expect_test "moves_win_for_x" =
+    List.iter (available_moves win_for_x) ~f:(fun pos -> let s = Game.Position.to_string pos in 
+    printf "%s " s);
+    [%expect
+      {|
+      
+      |}];
+    return ()
   ;;
 
   (* Exercise 2 *)
@@ -160,20 +196,42 @@ module Exercises = struct
   ;;
 end
 
+let handle (_client : unit) (query : Rpcs.Take_turn.Query.t) =
+  print_s [%message "Received query" (query : Rpcs.Take_turn.Query.t)];
+  let response = { Rpcs.Take_turn.Response.piece = Game.Piece.O ; Rpcs.Take_turn.Response.position = Game.Position.{row = 0 ; column = 0} } in
+  return response
+;;
+
+
+let implementations =
+  Rpc.Implementations.create_exn
+    ~on_unknown_rpc:`Close_connection
+    ~implementations:[ Rpc.Rpc.implement Rpcs.Take_turn.rpc handle ]
+;;
+
 let command_play =
   Command.async
     ~summary:"Play"
     (let%map_open.Command () = return ()
-     and controller =
+     and _controller =
        flag "-controller" (required host_and_port) ~doc:"_ host_and_port of controller"
      and port = flag "-port" (required int) ~doc:"_ port to listen on" in
      fun () ->
        (* We should start listing on the supplied [port], ready to handle incoming
           queries for [Take_turn] and [Game_over]. We should also connect to the
           controller and send a [Start_game] to initiate the game. *)
-       ignore controller;
-       ignore port;
-       return ())
+         
+             let%bind server =
+               Rpc.Connection.serve
+                 ~implementations
+                 ~initial_connection_state:(fun _client_identity _client_addr ->
+                   (* This constructs the "client" values which are passed to the
+                      implementation function above. We're just using unit for now. *)
+                   ())
+                 ~where_to_listen:(Tcp.Where_to_listen.of_port port)
+                 ()
+             in
+             Tcp.Server.close_finished server )
 ;;
 
 let command =

@@ -82,11 +82,11 @@ the "Answer board" below:
 Answer board:
 
 ```
- - | - | - 
+ 0 | - | 0 
  __|___|___
- - | - | - 
+ - | X | - 
  __|___|___
- - | - | - 
+ X | X | 0
 ```
                
 After you've answered look for a fellow fellow near you and discuss your answers!

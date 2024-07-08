@@ -88,6 +88,7 @@ type t =
   { game_kind : Game_kind.t
   ; board     : Piece.t Position.Map.t
   }
-[@@deriving sexp_of, bin_io]
+[@@deriving sexp_of, bin_io](*let game_kind t = t.game_kind 
 
+let board t = t.board *)
 let empty game_kind = { game_kind; board = Position.Map.empty }
