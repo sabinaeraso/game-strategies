@@ -52,6 +52,8 @@ module Position = struct
       ; column : int
       }
     [@@deriving sexp, equal, bin_io, compare]
+
+
   end
 
   include T
@@ -70,6 +72,11 @@ module Position = struct
   let up    { row; column } = { row = row - 1; column }
   let left  { row; column } = { row; column = column - 1 }
 
+  let down_right {row;column} = {row = row + 1; column= column + 1} 
+
+  let down_left {row;column} = {row = row + 1; column = column - 1}
+
+  
   let all_offsets =
     let ( >> ) = Fn.compose in
     [ up; up >> right; right; right >> down; down; down >> left; left; left >> up ]
@@ -88,7 +95,5 @@ type t =
   { game_kind : Game_kind.t
   ; board     : Piece.t Position.Map.t
   }
-[@@deriving sexp_of, bin_io](*let game_kind t = t.game_kind 
-
-let board t = t.board *)
+[@@deriving sexp_of, bin_io]
 let empty game_kind = { game_kind; board = Position.Map.empty }
