@@ -270,6 +270,12 @@ let%expect_test "evaluate_illegal" =
   return ()
 ;;
 
+let available_moves_that_do_not_immediately_lose ~(me : Game.Piece.t) (game : Game.t) : Game.Position.t list = 
+  let moves = available_moves game in 
+  let losing_moves = losing_moves ~me game in 
+  List.filter moves ~f:(fun move -> not (List.exists losing_moves ~f:(fun losing_move -> Game.Position.equal losing_move move )))
+;;
+
   let exercise_one =
     Command.async
       ~summary:"Exercise 1: Where can I move?"
@@ -289,7 +295,7 @@ let%expect_test "evaluate_illegal" =
        fun () ->
          let evaluation = evaluate win_for_x in
          print_s [%sexp (evaluation : Game.Evaluation.t)];
-         let evaluation = evaluate win_for_x in
+         let evaluation = evaluate non_win in
          print_s [%sexp (evaluation : Game.Evaluation.t)];
          return ())
   ;;
@@ -327,6 +333,18 @@ let%expect_test "evaluate_illegal" =
          return ())
   ;;
 
+
+  let exercise_five =
+    Command.async
+      ~summary:"Exercise f: What moves do not immediately lose?"
+      (let%map_open.Command () = return ()
+       and piece = piece_flag in
+       fun () ->
+         let good_moves = available_moves_that_do_not_immediately_lose ~me:piece non_win in
+         print_s [%sexp (good_moves : Game.Position.t list)];
+         return ())
+  ;;
+
   let command =
     Command.group
       ~summary:"Exercises"
@@ -334,6 +352,7 @@ let%expect_test "evaluate_illegal" =
       ; "two"  , exercise_two
       ; "three", exercise_three
       ; "four" , exercise_four
+      ; "five" , exercise_five
       ]
   ;;
 end
