@@ -276,6 +276,70 @@ let available_moves_that_do_not_immediately_lose ~(me : Game.Piece.t) (game : Ga
   List.filter moves ~f:(fun move -> not (List.exists losing_moves ~f:(fun losing_move -> Game.Position.equal losing_move move )))
 ;;
 
+
+let score ~(maxplayer : Game.Piece.t) (game : Game.t) = (* its maxplayers turn ? i think*)
+let other_player = 
+  match maxplayer with 
+  | X -> Game.Piece.O
+  | O -> Game.Piece.X 
+in
+  let eval = evaluate game in 
+  match eval with 
+  | Illegal_move -> 0
+  | Game_over {winner = Some piece} when Game.Piece.equal maxplayer piece -> Int.max_value
+  | Game_over {winner = Some piece} when not(Game.Piece.equal maxplayer piece) -> Int.min_value
+  | Game_over _ -> 0
+  | Game_continues -> let winning_moves_ = winning_moves ~me:maxplayer game in 
+  let num_winning_moves = List.length winning_moves_ in
+  let opponent_win_moves = winning_moves ~me:other_player game in
+  let num_opponent_win_moves = List.length opponent_win_moves in 
+ if (num_winning_moves >= 1) then (
+ Int.max_value (* you are about to win *)
+)
+else if (num_opponent_win_moves >= 2) then ( 
+  Int.min_value (* you are most certainly going to lose *)
+) else ( 
+  List.length (available_moves_that_do_not_immediately_lose ~me:maxplayer game )
+) (* the moves you can make that dont immediately lose *)
+;;
+
+let rec minimax game depth (current_player: Game.Piece.t) max_player = 
+  let next_player = 
+    match current_player with 
+    | X -> Game.Piece.O
+    | O -> Game.Piece.X 
+  in
+  let eval = evaluate game in 
+  let is_terminal = 
+  match eval with 
+  | Game_over _ -> true 
+  | Illegal_move -> true 
+  | _ -> false
+  in 
+  if (equal depth 0 || is_terminal) then (
+    score ~maxplayer:current_player game 
+  ) else (
+      if(Game.Piece.equal current_player max_player) then( 
+        let moves = available_moves game in 
+        let value = Int.min_value in 
+        List.fold moves ~init:0 ~f:(fun _val move -> 
+          let new_game = place_piece game ~piece:current_player ~position:move in
+          Int.max value (minimax new_game (depth - 1) next_player max_player )
+          )
+      ) else (
+        let value = Int.max_value in 
+        let moves = available_moves game in 
+        List.fold moves ~init:0 ~f:(fun _val move -> 
+          let new_game = place_piece game ~piece:current_player ~position:move in
+          Int.min value (minimax new_game (depth - 1) next_player max_player )
+          )
+      )
+  )
+;; (* look at all available moves and find the "new game" for each one. compare minimaxes and then choose the best  *)
+
+
+
+
   let exercise_one =
     Command.async
       ~summary:"Exercise 1: Where can I move?"
