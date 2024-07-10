@@ -4,7 +4,7 @@ module Game_kind : sig
   type t =
     | Tic_tac_toe
     | Omok
-  [@@deriving sexp_of, equal, bin_io]
+  [@@deriving sexp, equal, bin_io]
 
   val to_string     : t -> string
   val to_string_hum : t -> string
@@ -83,6 +83,6 @@ type t =
   { game_kind : Game_kind.t
   ; board     : Piece.t Position.Map.t
   }
-[@@deriving sexp_of, bin_io]
+[@@deriving sexp, bin_io]
 
 val empty : Game_kind.t -> t

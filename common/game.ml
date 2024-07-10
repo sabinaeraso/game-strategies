@@ -5,7 +5,7 @@ module Game_kind = struct
   type t =
     | Tic_tac_toe
     | Omok
-  [@@deriving sexp_of, equal, bin_io]
+  [@@deriving sexp, equal, bin_io]
 
   let to_string = Fn.compose Sexp.to_string_hum sexp_of_t
 
@@ -95,5 +95,5 @@ type t =
   { game_kind : Game_kind.t
   ; board     : Piece.t Position.Map.t
   }
-[@@deriving sexp_of, bin_io]
+[@@deriving sexp, bin_io]
 let empty game_kind = { game_kind; board = Position.Map.empty }
