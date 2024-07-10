@@ -12,6 +12,17 @@ module Exercises = struct
     { game with board }
   ;;
 
+
+  let create_empty_list game_kind  = 
+  let length = Game.Game_kind.board_length game_kind in 
+  let positions = List.join (List.init length ~f:( fun row -> 
+    List.init length ~f:(fun column -> 
+      Game.Position.{row = row ; column = column}
+      ))) in 
+      positions
+;;
+
+
   let win_for_x =
     let open Game in
     empty_game
@@ -79,6 +90,18 @@ module Exercises = struct
     return ()
   ;;
 
+
+  let%expect_test "create empty tic tac toe" =
+    List.iter (create_empty_list Game.Game_kind.Tic_tac_toe) ~f:(fun pos -> 
+      let s = Game.Position.to_string pos in 
+    printf "%s " s);
+    [%expect
+      {|
+      ((row 0) (column 0)) ((row 0) (column 1)) ((row 0) (column 2)) ((row 1) (column 0)) ((row 1) (column 1)) ((row 1) (column 2)) ((row 2) (column 0)) ((row 2) (column 1)) ((row 2) (column 2))
+      |}];
+    return ()
+  ;;
+
   let%expect_test "print_non_win" =
     print_game non_win;
     [%expect
@@ -123,10 +146,13 @@ module Exercises = struct
 
 let on_path pos_list pos board piece last_dir expected_dir = 
   (List.exists pos_list ~f:(fun this -> Game.Position.equal this pos)) && (String.equal (Game.Piece.to_string (Map.find_exn board pos)) (Game.Piece.to_string piece)) && (String.equal last_dir expected_dir || String.equal last_dir "None")
-;; 
+;; (* if this position exists on the board meaning theres a piece there, and that piece is my piece , and its in the direction that I cam from , or its starting a new path , then it can be considered on the path. Lets switch this to work not only for one over but also for leaving a gap or two between depending on win_length *)
+let on_path_empty last_dir expected_dir = 
+  (String.equal last_dir expected_dir || String.equal last_dir "None")
+;;
 
   let rec find_win pos_list game kind num last_dir last_pos piece unvisited board win_length = 
-      if (equal num win_length) then (Game.Evaluation.Game_over { winner = Some piece}) else(
+      if (equal num win_length) then ((Game.Evaluation.Game_over { winner = Some piece}, num)) else(
         let right = Game.Position.right last_pos in 
         if(on_path pos_list right board piece last_dir "Right") 
           then(
@@ -145,10 +171,9 @@ let on_path pos_list pos board piece last_dir expected_dir =
                   if(on_path pos_list down_left board piece last_dir "Down Left" ) then (
                     find_win pos_list game kind (num+1) "Down Left" down_right piece unvisited board win_length
                   ) else(
-
                       if (List.is_empty unvisited ) then (
-                        if (List.is_empty ( available_moves game )) then (Game.Evaluation.Game_over { winner = None}) else (
-                          Game.Evaluation.Game_continues
+                        if (List.is_empty ( available_moves game )) then ((Game.Evaluation.Game_over { winner = None}, num)) else (
+                          (Game.Evaluation.Game_continues, num)
                         )
                       ) else(
                       find_win pos_list game kind 1 "None" (List.hd_exn unvisited) (Map.find_exn board (List.hd_exn unvisited)) (List.tl_exn(unvisited)) board win_length 
@@ -158,7 +183,6 @@ let on_path pos_list pos board piece last_dir expected_dir =
             )
       ))
   ;;
-
 
   let evaluate (game : Game.t) : Game.Evaluation.t =
     let board = game.board in 
@@ -172,8 +196,69 @@ let on_path pos_list pos board piece last_dir expected_dir =
       if (row >= length || column >= length ) then (true) else( is )
       ) in 
       if (is_illegal) then (Game.Evaluation.Illegal_move) else(
-          find_win pos_list game kind 1 "None" (List.hd_exn pos_list) (Map.find_exn board (List.hd_exn pos_list)) (List.tl_exn(pos_list)) board win_length 
+          let (evaluation, _num ) = find_win pos_list game kind 1 "None" (List.hd_exn pos_list) (Map.find_exn board (List.hd_exn pos_list)) (List.tl_exn(pos_list)) board win_length in 
+          evaluation
       )
+  ;;
+
+  let rec find_win_with_num direction empty_positions pos_list game kind num total last_dir last_pos piece unvisited board win_length = 
+    let board_length = Game.Game_kind.board_length kind in 
+    if (equal num win_length) then ((Game.Evaluation.Game_over { winner = Some piece}, num)) else(
+      let next = match direction with 
+      | "Right "-> Game.Position.right last_pos
+      | "Down" -> Game.Position.down last_pos
+      | "Down Right" -> Game.Position.down_right last_pos 
+      | "Down Left" ->  Game.Position.down_left last_pos 
+      | _ -> failwith "Should not happen"
+  in 
+      if(on_path pos_list next board piece last_dir direction) 
+        then(
+          find_win_with_num direction empty_positions pos_list game kind (num+1) (total + 1) direction next piece unvisited board win_length
+          )
+      else if(on_path_empty last_dir direction ) then ( find_win_with_num direction empty_positions pos_list game kind num (total + 1) direction next piece unvisited board win_length)
+        else(
+          if (List.is_empty (available_moves game )) then ((Game.Evaluation.Game_over { winner = None}, num)) else (
+                        if (equal total board_length) then ((Game.Evaluation.Game_continues, num))
+                        else (Game.Evaluation.Game_continues, 0)
+                      )
+                ) 
+            )
+;; 
+
+  let evaluate_with_num (game : Game.t) my_piece =
+    let empty_positions = create_empty_list game.game_kind in 
+    let board = game.board in 
+    let kind = game.game_kind in 
+    let length = Game.Game_kind.board_length kind in 
+    let win_length = Game.Game_kind.win_length kind in 
+    let pos_list = Set.to_list (Map.key_set board) in 
+    let my_pieces = List.filter pos_list ~f:(fun pos -> 
+      let piece = Map.find_exn board pos in 
+      (String.equal (Game.Piece.to_string my_piece) (Game.Piece.to_string piece))
+      ) in 
+    let empty = List.filter empty_positions ~f:(fun pos -> not (List.exists pos_list ~f:(fun this -> Game.Position.equal this pos ) ) )in
+    let is_illegal = List.fold ~init:false pos_list ~f:(fun is pos -> 
+      let row = pos.row in 
+      let column= pos.column in 
+      if (row >= length || column >= length ) then (true) else( is )
+      ) in 
+      if (is_illegal) then ((Game.Evaluation.Illegal_move,[0])) else(
+
+        let paths  = List.concat_map my_pieces ~f:(fun pos -> 
+        let (_, right_num) = find_win_with_num "Right" empty pos_list game kind 1 1 "None" pos (Map.find_exn board (List.hd_exn pos_list)) (List.tl_exn(pos_list)) board win_length in 
+        let (_, down_num) = find_win_with_num "Down" empty pos_list game kind 1 1 "None" pos (Map.find_exn board (List.hd_exn pos_list)) (List.tl_exn(pos_list)) board win_length in 
+        let (_,down_left_num) = find_win_with_num "Down Left" empty pos_list game kind 1 1 "None" pos (Map.find_exn board (List.hd_exn pos_list)) (List.tl_exn(pos_list)) board win_length in 
+        let (_,down_right_num) = find_win_with_num "Down Right" empty pos_list game kind 1 1 "None" pos (Map.find_exn board (List.hd_exn pos_list)) (List.tl_exn(pos_list)) board win_length in 
+        let paths  = [right_num; down_num ; down_left_num ; down_right_num ] in 
+          let benchmark = match kind with 
+          | Tic_tac_toe -> 1
+          | Omok -> 2 in 
+          List.filter paths ~f:(fun num -> num >= benchmark)
+        ) in 
+            if ( List.exists paths ~f:(fun path -> equal path win_length)) then (Game.Evaluation.Game_over { winner = Some my_piece }, paths) else(
+                (Game.Evaluation.Game_continues , paths)
+            )
+        )  
   ;;
 
   let%expect_test "evaluate_non_win" =
@@ -236,11 +321,7 @@ let%expect_test "evaluate_illegal" =
 
   (* Exercise 4 *)
   let losing_moves ~(me : Game.Piece.t) (game : Game.t) : Game.Position.t list = 
-    let not_me = 
-      match me with 
-      | X -> Game.Piece.O
-      | O -> Game.Piece.X 
-    in
+    let not_me = Game.Piece.flip me in 
     match evaluate game with 
     | Game_continues -> 
       let moves = available_moves game in 
@@ -278,12 +359,10 @@ let available_moves_that_do_not_immediately_lose ~(me : Game.Piece.t) (game : Ga
 
 
 let score ~(maxplayer : Game.Piece.t) (game : Game.t) = (* its maxplayers turn ? i think*)
-let other_player = 
-  match maxplayer with 
-  | X -> Game.Piece.O
-  | O -> Game.Piece.X 
-in
-  let eval = evaluate game in 
+let _win_length = Game.Game_kind.win_length game.game_kind in 
+let other_player = Game.Piece.flip maxplayer in
+let kind = game.game_kind in 
+  let (eval, num) = evaluate_with_num game maxplayer in 
   match eval with 
   | Illegal_move -> 0
   | Game_over {winner = Some piece} when Game.Piece.equal maxplayer piece -> Int.max_value
@@ -297,18 +376,33 @@ in
  Int.max_value (* you are about to win *)
 )
 else if (num_opponent_win_moves >= 2) then ( 
-  Int.min_value (* you are most certainly going to lose *)
+  Int.min_value (* you are going to lose very soon *)
 ) else ( 
-  List.length (available_moves_that_do_not_immediately_lose ~me:maxplayer game )
-) (* the moves you can make that dont immediately lose *)
+  match kind with 
+  | Tic_tac_toe -> 
+    let vals = (List.map num ~f:(fun length -> 
+      match length with 
+      | 1 -> 100
+      | 2 -> 1000
+      | _ -> 0)) in 
+    List.fold ~init:0 vals ~f:(fun curr vals -> 
+      (vals + curr )
+    )
+  | Omok -> 
+    let vals = (List.map num ~f:(fun length -> 
+      match length with 
+      | 2 -> 10
+      | 3 -> 100
+      | 4 -> 1000
+      | _ -> 0 ))in 
+      List.fold ~init:0 vals ~f:(fun curr vals -> 
+        (vals + curr )
+      )
+) 
 ;;
 
 let rec minimax game depth (current_player: Game.Piece.t) max_player = 
-  let next_player = 
-    match current_player with 
-    | X -> Game.Piece.O
-    | O -> Game.Piece.X 
-  in
+  let next_player = Game.Piece.flip current_player in
   let eval = evaluate game in 
   let is_terminal = 
   match eval with 
@@ -337,7 +431,16 @@ let rec minimax game depth (current_player: Game.Piece.t) max_player =
   )
 ;; (* look at all available moves and find the "new game" for each one. compare minimaxes and then choose the best  *)
 
-
+let choose_move game player = 
+  let next_player = Game.Piece.flip player in 
+  let available_moves = available_moves game in 
+  List.fold available_moves ~init:(List.hd_exn available_moves , Int.min_value) ~f:(fun prev move -> 
+    let new_game = place_piece game ~piece:player ~position:move in 
+    let value = minimax new_game 5 next_player player in 
+    let (_, prev_val) = prev in 
+    if (value > prev_val) then ( (move,value)) else(prev)
+    )
+;;
 
 
   let exercise_one =

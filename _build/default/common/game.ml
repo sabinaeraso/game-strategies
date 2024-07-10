@@ -76,7 +76,7 @@ module Position = struct
 
   let down_left {row;column} = {row = row + 1; column = column - 1}
 
-  
+
   let all_offsets =
     let ( >> ) = Fn.compose in
     [ up; up >> right; right; right >> down; down; down >> left; left; left >> up ]
