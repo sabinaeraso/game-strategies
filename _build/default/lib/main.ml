@@ -151,13 +151,13 @@ module Exercises = struct
   (* Exercise 2 *)
 
 
-let on_path pos_list pos board piece last_dir expected_dir = 
-  (List.exists pos_list ~f:(fun this -> Game.Position.equal this pos)) && (String.equal (Game.Piece.to_string (Map.find_exn board pos)) (Game.Piece.to_string piece)) && (String.equal last_dir expected_dir || String.equal last_dir "None")
+let is_my_piece my_pieces pos board piece last_dir expected_dir = 
+  (List.exists my_pieces ~f:(fun this -> Game.Position.equal this pos)) && (String.equal (Game.Piece.to_string (Map.find_exn board pos)) (Game.Piece.to_string piece)) && (String.equal last_dir expected_dir || String.equal last_dir "None")
 ;; (* if this position exists on the board meaning theres a piece there, and that piece is my piece , and its in the direction that I cam from , or its starting a new path , then it can be considered on the path. Lets switch this to work not only for one over but also for leaving a gap or two between depending on win_length *)
 let on_path_empty next empty_list = 
  List.exists empty_list ~f:(fun e -> Game.Position.equal next e )
 ;;
-
+(*
   let rec find_win pos_list game kind num last_dir last_pos piece unvisited board win_length = 
       if (equal num win_length) then ((Game.Evaluation.Game_over { winner = Some piece}, num)) else(
         let right = Game.Position.right last_pos in 
@@ -189,8 +189,8 @@ let on_path_empty next empty_list =
               )
             )
       ))
-  ;;
-
+  ;; *)
+(*
   let evaluate (game : Game.t) : Game.Evaluation.t =
     let board = game.board in 
     let kind = game.game_kind in 
@@ -206,11 +206,11 @@ let on_path_empty next empty_list =
           let (evaluation, _num ) = find_win pos_list game kind 1 "None" (List.hd_exn pos_list) (Map.find_exn board (List.hd_exn pos_list)) (List.tl_exn(pos_list)) board win_length in 
           evaluation
       )
-  ;; 
+  ;; *)
 
-  let rec find_win_with_num direction empty_positions pos_list game kind num total last_pos piece board win_length = 
+  let rec find_win_with_num direction empty_positions my_pieces game kind num total last_pos piece board win_length = 
     let _board_length = Game.Game_kind.board_length kind in 
-    if (equal num win_length) then ((Game.Evaluation.Game_over { winner = Some piece}, num)) else(
+    if (num >= win_length) then ((Game.Evaluation.Game_over { winner = Some piece}, num)) else(
       let next = match direction with 
       | "Right "-> Game.Position.right last_pos
       | "Down" -> Game.Position.down last_pos
@@ -218,11 +218,12 @@ let on_path_empty next empty_list =
       | "Down Left" ->  Game.Position.down_left last_pos 
       | _ -> Game.Position.down_left last_pos 
   in 
-      if( (Game.Position.in_bounds next ~game_kind:kind )&& on_path pos_list next board piece direction direction) 
+      if( (Game.Position.in_bounds next ~game_kind:kind)&& is_my_piece my_pieces next board piece direction direction) 
         then(
-          find_win_with_num direction empty_positions pos_list game kind (num+1) (total + 1) next piece board win_length
+          find_win_with_num direction empty_positions my_pieces game kind (num+1) (total+1) next piece board win_length
           )
-      else if(on_path_empty next empty_positions) then ( find_win_with_num direction empty_positions pos_list game kind num (total + 1) next piece board win_length)
+      else if((Game.Position.in_bounds next ~game_kind:kind) && on_path_empty next empty_positions) then ( 
+        find_win_with_num direction empty_positions my_pieces game kind num (total + 1) next piece board win_length)
         else(
           if (List.is_empty (available_moves game )) then ((Game.Evaluation.Game_over { winner = None}, num)) else (
                         if (equal total win_length) then ((Game.Evaluation.Game_continues, num))
@@ -252,10 +253,10 @@ let on_path_empty next empty_list =
       if (is_illegal) then ((Game.Evaluation.Illegal_move,[0])) else(
 
         let paths  = List.concat_map my_pieces ~f:(fun pos -> 
-        let (_, right_num) = find_win_with_num "Right" empty pos_list game kind 1 1 pos my_piece board win_length in 
-        let (_, down_num) = find_win_with_num "Down" empty pos_list game kind 1 1 pos my_piece board win_length in 
-        let (_,down_left_num) = find_win_with_num "Down Left" empty pos_list game kind 1 1 pos my_piece board win_length in 
-        let (_,down_right_num) = find_win_with_num "Down Right" empty pos_list game kind 1 1 pos my_piece board win_length in 
+        let (_, right_num) = find_win_with_num "Right" empty my_pieces game kind 1 1 pos my_piece board win_length in 
+        let (_, down_num) = find_win_with_num "Down" empty my_pieces game kind 1 1 pos my_piece board win_length in 
+        let (_,down_left_num) = find_win_with_num "Down Left" empty my_pieces game kind 1 1 pos my_piece board win_length in 
+        let (_,down_right_num) = find_win_with_num "Down Right" empty my_pieces game kind 1 1 pos my_piece board win_length in 
         let paths  = [right_num; down_num ; down_left_num ; down_right_num ] in 
           let benchmark = match kind with 
           | Tic_tac_toe -> 1
@@ -313,7 +314,7 @@ let%expect_test "evaluate_illegal" =
             )
       )
     | _ -> []
-  ;;
+  ;; (* maybe check the paths and then if therees a num thats 1 less then you have a winning move? but determining what that move is is a bit more tricky*)
 
   let%expect_test "winning_moves_non_win" =
   let win = winning_moves ~me:Game.Piece.X non_win in 
@@ -326,7 +327,7 @@ let%expect_test "evaluate_illegal" =
   return ()
 ;;
 
-  (* Exercise 4 *) 
+  (* Exercise 4 *) (*
   let losing_moves ~(me : Game.Piece.t) (game : Game.t) : Game.Position.t list = 
     let not_me = Game.Piece.flip me in 
     match evaluate game with 
@@ -345,8 +346,8 @@ let%expect_test "evaluate_illegal" =
       )
     | _ -> []
   ;;
-
-
+*)
+(*
   let%expect_test "losing_moves_non_win" =
   let lose = losing_moves ~me:Game.Piece.O non_win in 
   List.iter (lose) ~f:(fun pos -> let s = Game.Position.to_string pos in 
@@ -363,14 +364,14 @@ let available_moves_that_do_not_immediately_lose ~(me : Game.Piece.t) (game : Ga
   let losing_moves = losing_moves ~me game in 
   List.filter moves ~f:(fun move -> not (List.exists losing_moves ~f:(fun losing_move -> Game.Position.equal losing_move move )))
 ;;
-
+*)
 
 let score current_player (maxplayer : Game.Piece.t) (game : Game.t) depth = (* its maxplayers turn ? i think*)
 let _win_length = Game.Game_kind.win_length game.game_kind in 
 let other_player = Game.Piece.flip current_player in
 let kind = game.game_kind in 
   let (eval, num) = evaluate_with_num game current_player in 
-  let (_, opp_num ) = evaluate_with_num game other_player in
+  let (_, _opp_num ) = evaluate_with_num game other_player in
   match eval with 
   | Illegal_move -> 0
   | Game_over {winner = Some piece} when Game.Piece.equal maxplayer piece -> 
@@ -419,7 +420,7 @@ else if (num_opponent_win_moves >= 2) then (
       | _ -> 0 ))in 
       List.fold ~init:0 vals ~f:(fun curr vals -> 
         (vals + curr )
-      ) in 
+      ) in (*
     let opp_value = match kind with 
     | Tic_tac_toe -> 
       let vals = (List.map opp_num ~f:(fun length -> 
@@ -439,8 +440,8 @@ else if (num_opponent_win_moves >= 2) then (
         | _ -> 0 ))in 
         List.fold ~init:0 vals ~f:(fun curr vals -> 
           (vals + curr )
-        ) in 
-    my_value + opp_value
+        ) in *)
+    my_value (*+ opp_value *)
 ) 
 ;;
 
@@ -493,7 +494,7 @@ let choose_move (game:Game.t) player =
   )
   )
 ;;
-
+(*
 
   let exercise_one =
     Command.async
@@ -564,17 +565,19 @@ let choose_move (game:Game.t) player =
          return ())
   ;;
 
-  let command =
-    Command.group
-      ~summary:"Exercises"
-      [ "one"  , exercise_one
-      ; "two"  , exercise_two
-      ; "three", exercise_three
-      ; "four" , exercise_four
-      ; "five" , exercise_five
-      ]
-  ;;
-end
+
+*)
+let command =
+  Command.group
+    ~summary:"Exercises"
+    [ (*"one"  , exercise_one
+    ; "two"  , exercise_two
+    ; "three", exercise_three
+    ; "four" , exercise_four
+    ; "five" , exercise_five*)
+    ]
+;;
+end 
 
 let handle (_client : unit) (query : Rpcs.Take_turn.Query.t) =
   print_s [%message "Received query" (query : Rpcs.Take_turn.Query.t)];
