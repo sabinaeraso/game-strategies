@@ -406,8 +406,8 @@ let kind = game.game_kind in
   | Omok ->
     let vals = (List.map num ~f:(fun length -> 
       match length with 
-      | 2 -> 100
-      | 3 -> 600
+      | 2 -> 10
+      | 3 -> 300
       | 4 -> 1000
       | _ -> 0 ))in 
       List.fold ~init:0 vals ~f:(fun curr vals -> 

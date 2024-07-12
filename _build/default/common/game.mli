@@ -4,7 +4,7 @@ module Game_kind : sig
   type t =
     | Tic_tac_toe
     | Omok
-  [@@deriving sexp, equal, bin_io]
+  [@@deriving sexp_of, equal, bin_io]
 
   val to_string     : t -> string
   val to_string_hum : t -> string
@@ -41,7 +41,7 @@ module Position : sig
     { row    : int
     ; column : int
     }
-  [@@deriving sexp_of, equal, bin_io, compare]
+  [@@deriving sexp, equal, bin_io, compare]
 
   val to_string : t -> string
   val in_bounds : t -> game_kind:Game_kind.t -> bool
@@ -61,7 +61,7 @@ module Position : sig
   val down_left : t -> t option
 
 
-  val down_right : t -> t option 
+  val down_right : t -> t option
 
   val up_left : t -> t option 
 
@@ -81,13 +81,13 @@ module Evaluation : sig
     | Illegal_move
     | Game_continues
     | Game_over of { winner : Piece.t option }
-  [@@deriving sexp_of, bin_io]
+  [@@deriving sexp, bin_io,of_sexp]
 end
 
 type t =
   { game_kind : Game_kind.t
   ; board     : Piece.t Position.Map.t
   }
-[@@deriving sexp, bin_io]
+[@@deriving sexp_of, bin_io]
 
 val empty : Game_kind.t -> t

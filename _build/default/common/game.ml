@@ -116,12 +116,12 @@ module Evaluation = struct
     | Illegal_move
     | Game_continues
     | Game_over of { winner : Piece.t option }
-  [@@deriving sexp_of, bin_io]
+  [@@deriving sexp, bin_io]
 end
 
 type t =
   { game_kind : Game_kind.t
   ; board     : Piece.t Position.Map.t
   }
-[@@deriving sexp, bin_io]
+[@@deriving sexp, bin_io,of_sexp]
 let empty game_kind = { game_kind; board = Position.Map.empty }
