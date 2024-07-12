@@ -47,26 +47,31 @@ module Position : sig
   val in_bounds : t -> game_kind:Game_kind.t -> bool
 
   (** [down t] is [t]'s downwards neighbor. *)
-  val down      : t -> t
+  val down      : t -> t option
 
   (** [right t] is [t]'s rightwards neighbor. *)
-  val right     : t -> t
+  val right     : t -> t option
 
   (** [up t] is [t]'s upwards neighbor. *)
-  val up        : t -> t
+  val up        : t -> t option
 
   (** [left t] is [t]'s leftwards neighbor. *)
-  val left      : t -> t
+  val left      : t -> t option
 
-  val down_left : t -> t
+  val down_left : t -> t option
 
-  val down_right : t -> t
+
+  val down_right : t -> t option 
+
+  val up_left : t -> t option 
+
+  val up_right : t -> t option
 
   
   (** [all_offsets] is a list of functions to compute all 8 neighbors of a
     cell (i.e. left, up-left, up, up-right, right, right-down, down,
     down-left). *)
-  val all_offsets : (t -> t) list
+(* val all_offsets : (t -> t) list *)
 
   include Comparable.S_plain with type t := t
 end

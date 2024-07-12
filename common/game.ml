@@ -67,21 +67,49 @@ module Position = struct
     List.for_all [ t.row; t.column ] ~f:(fun x -> x >= 0 && x < board_length)
   ;;
 
-  let down  { row; column } = { row = row + 1; column }
-  let right { row; column } = { row; column = column + 1 }
-  let up    { row; column } = { row = row - 1; column }
-  let left  { row; column } = { row; column = column - 1 }
+  let down  { row; column } = 
+  match in_bounds { row = row + 1; column } ~game_kind:Omok with 
+              | false -> None  
+              | true -> Some { row = row + 1; column }
+  let right { row; column } = 
+   match in_bounds { row; column = column + 1 } ~game_kind:Omok with 
+   | false -> None  
+   | true -> Some { row; column = column + 1 } 
+  let up    { row; column } = 
+  match in_bounds { row = row - 1; column }  ~game_kind:Omok with 
+  | false -> None  
+  | true -> Some{ row = row - 1; column } 
+  let left  { row; column } = 
+  match in_bounds { row; column = column - 1 } ~game_kind:Omok with 
+  | false -> None  
+  | true -> Some { row; column = column - 1 }
 
-  let down_right {row;column} = {row = row + 1; column= column + 1} 
+  let down_right {row;column} =
+    match in_bounds  {row = row + 1; column= column + 1} ~game_kind:Omok with 
+    | false -> None  
+    | true -> Some {row = row + 1; column= column + 1}
 
-  let down_left {row;column} = {row = row + 1; column = column - 1}
+  let down_left {row;column} =
+    match in_bounds  {row = row + 1; column = column - 1} ~game_kind:Omok with 
+    | false -> None  
+    | true -> Some {row = row + 1; column = column - 1}
 
+    let up_left {row;column} =
+      match in_bounds  {row = row - 1 ; column = column - 1} ~game_kind:Omok with 
+      | false -> None  
+      | true -> Some {row = row + 1; column = column - 1}
 
+      let up_right {row;column} =
+        match in_bounds  {row = row - 1; column = column + 1} ~game_kind:Omok with 
+        | false -> None  
+        | true -> Some {row = row + 1; column = column - 1}
+
+(*
   let all_offsets =
     let ( >> ) = Fn.compose in
     [ up; up >> right; right; right >> down; down; down >> left; left; left >> up ]
-  ;;
-end
+  ;; *)
+end 
 
 module Evaluation = struct
   type t =
